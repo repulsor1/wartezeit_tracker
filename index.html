@@ -329,7 +329,7 @@ let liveLoaded = false;
 async function fetchLive() {
   try {
     const url = 'https://queue-times.com/parks/56/queue_times.json';
-    const proxy = 'https://corsproxy.io/?' + encodeURIComponent(url);
+    const proxy = 'https://corsproxy.io/?url=' + encodeURIComponent(url);
     const res = await fetch(proxy, {signal: AbortSignal.timeout(6000)});
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
