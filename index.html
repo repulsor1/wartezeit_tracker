@@ -144,7 +144,7 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
   <!-- Header -->
   <div class="header">
     <div class="header-row">
-      <div class="header-title">Wartezeit<span>Tracker by repulsor</span></div>
+      <div class="header-title">Wartezeit<span>Tracker</span></div>
       <div class="live-badge off" id="live-badge"><div class="live-dot"></div><span id="live-label">Demo</span></div>
     </div>
     <div class="park-chip">Phantasialand · Brühl</div>
@@ -439,9 +439,11 @@ function stopTimer(){
   const ms=elapsed, mm=Math.floor(ms/60), ss=ms%60;
   const diff=Math.round((ms-statedMin*60)/60);
   const now=new Date();
+  const endTimeStr = pad(now.getHours())+':'+pad(now.getMinutes())+' Uhr';
   log.push({
     ts: new Date().toLocaleString('de-DE'),
     startTime: startTimeStr,
+    endTime: endTimeStr,
     ride, measuredS:ms, statedMin, diff
   });
   document.getElementById('r-ride').textContent=ride;
@@ -474,9 +476,9 @@ function renderLog(){
 }
 
 function buildCSV(){
-  const hdr='Zeitstempel,Angestellt_um,Park,Attraktion,Gemessen_Sek,Gemessen_Min,Angabe_Min,Differenz_Min';
+  const hdr='Zeitstempel,Angestellt_um,Dran_um,Park,Attraktion,Gemessen_Sek,Gemessen_Min,Angabe_Min,Differenz_Min';
   const rows=log.map(e=>[
-    e.ts, e.startTime||'–', 'Phantasialand',
+    e.ts, e.startTime||'–', e.endTime||'–', 'Phantasialand',
     '"'+e.ride+'"', e.measuredS,
     Math.floor(e.measuredS/60), e.statedMin, e.diff
   ].join(','));
