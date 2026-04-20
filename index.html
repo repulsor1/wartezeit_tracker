@@ -144,7 +144,7 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
   <!-- Header -->
   <div class="header">
     <div class="header-row">
-      <div class="header-title">Wartezeit<span>Tracker0.4</span></div>
+      <div class="header-title">Wartezeit<span>Tracker</span></div>
       <div class="live-badge off" id="live-badge"><div class="live-dot"></div><span id="live-label">Demo</span></div>
     </div>
     <div class="park-chip">Phantasialand · Brühl</div>
@@ -330,13 +330,10 @@ async function fetchLive() {
   const badge = document.getElementById('live-badge');
   const label = document.getElementById('live-label');
   try {
-    const url = 'https://queue-times.com/parks/56/queue_times.json';
-    const proxy = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+    const proxy = 'https://repulsor1--9cda87723c8c11f19a5c42b51c65c3df.web.val.run';
     const res = await fetch(proxy, {signal: AbortSignal.timeout(8000)});
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    const wrapper = await res.json();
-    if (!wrapper.contents) throw new Error('Leere Antwort');
-    const data = JSON.parse(wrapper.contents);
+    const data = await res.json();
     const rides = data.lands ? data.lands.flatMap(l => l.rides || []) : (data.rides || []);
     rides.forEach(r => {
       if (r.name && r.wait_time != null) liveWaits[r.name] = r.wait_time;
