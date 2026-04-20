@@ -148,7 +148,7 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
   <!-- Header -->
   <div class="header">
     <div class="header-row">
-      <div class="header-title">Wartezeit<span>Tracker v0.8</span></div>
+      <div class="header-title">Wartezeit<span>Tracker</span></div>
       <div class="live-badge off" id="live-badge"><div class="live-dot"></div><span id="live-label">Demo</span></div>
     </div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px;">
@@ -271,7 +271,7 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
       <div id="log-wrap"></div>
     </div>
     <div class="btn-wrap">
-      <button class="btn btn-export" onclick="exportCSV()">↓ CSV exportieren (<span id="log-count">0</span> Einträge)</button>
+      <button class="btn btn-export" onclick="copyText()">⎘ Kopieren (<span id="log-count">0</span> Einträge)</button>
       <button class="btn btn-primary" onclick="go('s-select')">+ Nächste Attraktion</button>
       <button class="btn btn-del" onclick="askDelete()">🗑 Alle Fahrten löschen</button>
     </div>
@@ -377,7 +377,7 @@ function getWait(name) {
 // ── State ──
 let filter = 'alle', ride = null, statedMin = 0;
 let timerStart = null, timerInterval = null, elapsed = 0, startTimeStr = '';
-let log = [];
+let log = JSON.parse(localStorage.getItem('wt_log') || '[]');
 
 function wClass(m){ return !m||m===0?'wna':m<=20?'wlow':m<=45?'wmid':'whigh'; }
 function pad(n){ return String(n).padStart(2,'0'); }
@@ -460,6 +460,7 @@ function stopTimer(){
     endTime: endTimeStr,
     ride, measuredS:ms, statedMin, diff
   });
+  localStorage.setItem('wt_log', JSON.stringify(log));
   document.getElementById('r-ride').textContent=ride;
   document.getElementById('r-measured').textContent=mm+':'+pad(ss);
   document.getElementById('r-stated').textContent=statedMin;
@@ -489,22 +490,36 @@ function renderLog(){
   </table>`;
 }
 
-function buildCSV(){
-  const hdr='Zeitstempel,Angestellt_um,Dran_um,Park,Attraktion,Gemessen_Sek,Gemessen_Min,Angabe_Min,Differenz_Min';
-  const rows=log.map(e=>[
-    e.ts, e.startTime||'–', e.endTime||'–', 'Phantasialand',
-    '"'+e.ride+'"', e.measuredS,
-    Math.floor(e.measuredS/60), e.statedMin, e.diff
-  ].join(','));
-  return [hdr,...rows].join('\n');
+function buildText(){
+  return log.map(e=>{
+    const endH = e.endTime ? e.endTime.replace(':','').replace(' Uhr','') : '–';
+    const measMin = Math.floor(e.measuredS/60);
+    return e.ride+' '+endH+' '+measMin+'/'+e.statedMin;
+  }).join('\n');
 }
 
-function exportCSV(){
+function copyText(){
   if(!log.length){ alert('Noch keine Messungen gespeichert.'); return; }
-  const a=document.createElement('a');
-  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(buildCSV());
-  a.download='wartezeiten_phantasialand_'+new Date().toISOString().slice(0,10)+'.csv';
-  a.click();
+  const text = buildText();
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn = document.querySelector('.btn-export');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✓ Kopiert!';
+    setTimeout(()=>{ btn.innerHTML = orig; }, 2000);
+  }).catch(()=>{
+    // Fallback für ältere iOS-Versionen
+    const ta = document.createElement('textarea');
+    ta.value = buildText();
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    const btn = document.querySelector('.btn-export');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✓ Kopiert!';
+    setTimeout(()=>{ btn.innerHTML = orig; }, 2000);
+  });
 }
 
 // ── Löschen ──
@@ -514,9 +529,10 @@ function askDelete(){
   document.getElementById('modal-delete').classList.remove('hidden');
 }
 function closeModal(){ document.getElementById('modal-delete').classList.add('hidden'); }
-function exportThenDelete(){ exportCSV(); confirmDelete(); }
+function exportThenDelete(){ copyText(); setTimeout(confirmDelete, 500); }
 function confirmDelete(){
   log=[];
+  localStorage.removeItem('wt_log');
   renderLog();
   document.getElementById('log-count').textContent=0;
   closeModal();
