@@ -148,7 +148,7 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
   <!-- Header -->
   <div class="header">
     <div class="header-row">
-      <div class="header-title">Wartezeit<span>Tracker0.5</span></div>
+      <div class="header-title">Wartezeit<span>Tracker</span></div>
       <div class="live-badge off" id="live-badge"><div class="live-dot"></div><span id="live-label">Demo</span></div>
     </div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px;">
@@ -382,8 +382,8 @@ function render(){
   if(!list.length){ el.innerHTML='<div class="empty">Keine Attraktionen gefunden</div>'; return; }
   el.innerHTML = list.map(r=>{
     const w = getWait(r.name);
-    const cls = w.live ? 'wlive' : wClass(w.val);
-    const label = w.val ? w.val+' min' : '–';
+    const cls = w.live ? 'wlive' : 'wna';
+    const label = w.live && w.val ? w.val+' min' : '–';
     const safeName = r.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     return `<div class="ride-card" onclick="pick('${safeName}',${w.val},${w.live})">
       <div class="ride-info">
@@ -405,12 +405,12 @@ function setFilter(f,el){
 function pick(name, wait, live){
   ride=name; statedMin=wait;
   document.getElementById('c-name').textContent=name;
-  document.getElementById('c-wait').textContent=wait||'–';
-  document.getElementById('manual').value=wait||'';
+  document.getElementById('c-wait').textContent=live&&wait?wait:'–';
+  document.getElementById('manual').value=live&&wait?wait:'';
   const b=document.getElementById('c-badge');
-  b.className='wait-pill '+(live?'wlive':wClass(wait));
-  b.textContent=wait?wait+' min':'–';
-  document.getElementById('c-src').textContent=live?'Quelle: queue-times.com (Live ●)':'Quelle: Durchschnittswerte (Demo)';
+  b.className='wait-pill '+(live&&wait?'wlive':'wna');
+  b.textContent=live&&wait?wait+' min':'–';
+  document.getElementById('c-src').textContent=live?'Quelle: queue-times.com (Live ●)':'Keine Live-Daten – bitte manuell eingeben';
   go('s-confirm');
 }
 
