@@ -148,7 +148,7 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
   <!-- Header -->
   <div class="header">
     <div class="header-row">
-      <div class="header-title">Wartezeit<span>Tracker v0.7</span></div>
+      <div class="header-title">Wartezeit<span>Tracker</span></div>
       <div class="live-badge off" id="live-badge"><div class="live-dot"></div><span id="live-label">Demo</span></div>
     </div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px;">
@@ -297,8 +297,8 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
 const RIDES = [
   {name:"Taron",                        cat:"achterbahn", wait:55},
   {name:"F.L.Y.",                       cat:"achterbahn", wait:50},
-  {name:"Winja’s Force",                cat:"achterbahn", wait:53},
-  {name:"Winja’s Fear",                 cat:"achterbahn", wait:40},
+  {name:"Winja's Force", id:6830, cat:"achterbahn", wait:53},
+  {name:"Winja's Fear",  id:6828, cat:"achterbahn", wait:40},
   {name:"Black Mamba",                  cat:"achterbahn", wait:34},
   {name:"Colorado Adventure",           cat:"achterbahn", wait:35},
   {name:"Raik",                         cat:"achterbahn", wait:36},
@@ -330,7 +330,8 @@ const RIDES = [
 const CATS = {achterbahn:"Achterbahn", dark:"Dark Ride / Show", wasser:"Wasserfahrt", kinder:"Kinderfahrt"};
 
 // Live-Wartezeiten per CORS-Proxy von queue-times.com (Park-ID 56 = Phantasialand)
-let liveWaits = {}; // name → Minuten
+let liveWaits = {};   // name → Minuten
+let liveWaitsById = {}; // id → Minuten
 let liveLoaded = false;
 
 async function fetchLive() {
@@ -344,6 +345,7 @@ async function fetchLive() {
     const rides = data.lands ? data.lands.flatMap(l => l.rides || []) : (data.rides || []);
     rides.forEach(r => {
       if (r.name && r.wait_time != null) liveWaits[r.name] = r.wait_time;
+      if (r.id  && r.wait_time != null) liveWaitsById[r.id] = r.wait_time;
     });
     liveLoaded = Object.keys(liveWaits).length > 0;
     if (liveLoaded) {
@@ -362,9 +364,14 @@ async function fetchLive() {
 }
 
 function getWait(name) {
-  if (liveLoaded && liveWaits[name] != null) return {val: liveWaits[name], live: true};
-  const r = RIDES.find(x => x.name === name);
-  return {val: r ? r.wait : 0, live: false};
+  if (liveLoaded) {
+    // try by name first, then by id for rides with special characters
+    if (liveWaits[name] != null) return {val: liveWaits[name], live: true};
+    const rideEntry = RIDES.find(x => x.name === name);
+    if (rideEntry && rideEntry.id && liveWaitsById[rideEntry.id] != null)
+      return {val: liveWaitsById[rideEntry.id], live: true};
+  }
+  return {val: 0, live: false};
 }
 
 // ── State ──
