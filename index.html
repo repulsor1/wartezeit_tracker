@@ -148,7 +148,7 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
   <!-- Header -->
   <div class="header">
     <div class="header-row">
-      <div class="header-title">Wartezeit<span>Tracker v0.9</span></div>
+      <div class="header-title">Wartezeit<span>Tracker v0.10</span></div>
       <div class="live-badge off" id="live-badge"><div class="live-dot"></div><span id="live-label">Demo</span></div>
     </div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px;">
@@ -277,6 +277,18 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
     </div>
   </div>
 
+</div>
+
+<!-- Modal: Messvorgang wiederherstellen -->
+<div class="modal-overlay hidden" id="modal-recover">
+  <div class="modal-box">
+    <div class="modal-title">Letzten Messvorgang fortsetzen?</div>
+    <div class="modal-desc" id="recover-desc">–</div>
+    <div class="modal-btn-row">
+      <button class="btn btn-primary" onclick="recoverTimer()">Fortsetzen</button>
+      <button class="btn btn-ghost"   onclick="discardRecover()">Verwerfen</button>
+    </div>
+  </div>
 </div>
 
 <!-- Modal: Löschen bestätigen -->
@@ -436,6 +448,9 @@ function startTimer(){
   document.getElementById('t-eta').textContent=etaStr;
 
   timerStart=Date.now(); elapsed=0;
+  localStorage.setItem('wt_active', JSON.stringify({
+    ride, statedMin, startTimeStr, timerStart
+  }));
   go('s-timer');
   timerInterval=setInterval(()=>{ elapsed=Math.floor((Date.now()-timerStart)/1000); tick(); },1000);
 }
@@ -450,6 +465,7 @@ function tick(){
 
 function stopTimer(){
   clearInterval(timerInterval);
+  localStorage.removeItem('wt_active');
   const ms=elapsed, mm=Math.floor(ms/60), ss=ms%60;
   const diff=Math.round((ms-statedMin*60)/60);
   const now=new Date();
@@ -473,7 +489,7 @@ function stopTimer(){
   go('s-result');
 }
 
-function cancelTimer(){ clearInterval(timerInterval); elapsed=0; go('s-select'); }
+function cancelTimer(){ clearInterval(timerInterval); localStorage.removeItem('wt_active'); elapsed=0; go('s-select'); }
 
 function renderLog(){
   const w=document.getElementById('log-wrap');
@@ -552,9 +568,56 @@ async function refreshLive() {
   setTimeout(() => btn.classList.remove('spinning'), 700);
 }
 
+// ── Messvorgang wiederherstellen ──
+function checkRecover() {
+  const saved = localStorage.getItem('wt_active');
+  if (!saved) return;
+  const a = JSON.parse(saved);
+  const secondsAgo = Math.floor((Date.now() - a.timerStart) / 1000);
+  const minAgo = Math.floor(secondsAgo / 60);
+  const secAgo = secondsAgo % 60;
+  // Nur anbieten wenn weniger als 3 Stunden vergangen (sinnvolles Limit)
+  if (secondsAgo > 10800) { localStorage.removeItem('wt_active'); return; }
+  document.getElementById('recover-desc').innerHTML =
+    '<strong>' + a.ride + '</strong><br>Gestartet um ' + a.startTimeStr +
+    '<br>Verstrichene Zeit: ' + pad(Math.floor(minAgo/60)) + ':' + pad(minAgo%60) + ':' + pad(secAgo) +
+    '<br>Angegeben: ' + a.statedMin + ' min';
+  document.getElementById('modal-recover').classList.remove('hidden');
+}
+
+function recoverTimer() {
+  const saved = localStorage.getItem('wt_active');
+  if (!saved) return;
+  const a = JSON.parse(saved);
+  ride = a.ride;
+  statedMin = a.statedMin;
+  startTimeStr = a.startTimeStr;
+  timerStart = a.timerStart;
+  elapsed = Math.floor((Date.now() - timerStart) / 1000);
+
+  // Berechne voraussichtliche Fahrzeit neu
+  const etaDate = new Date(timerStart + statedMin * 60 * 1000);
+  const etaStr = pad(etaDate.getHours()) + ':' + pad(etaDate.getMinutes()) + ' Uhr';
+
+  document.getElementById('t-ride').textContent = ride;
+  document.getElementById('t-stated').textContent = statedMin + ' min angegeben';
+  document.getElementById('t-starttime').textContent = startTimeStr;
+  document.getElementById('t-eta').textContent = etaStr;
+
+  document.getElementById('modal-recover').classList.add('hidden');
+  go('s-timer');
+  timerInterval = setInterval(() => { elapsed = Math.floor((Date.now() - timerStart) / 1000); tick(); }, 1000);
+}
+
+function discardRecover() {
+  localStorage.removeItem('wt_active');
+  document.getElementById('modal-recover').classList.add('hidden');
+}
+
 // ── Init ──
 render();
-fetchLive(); // Versucht Live-Daten zu laden; fällt bei Fehler auf Demo zurück
+fetchLive();
+checkRecover(); // Versucht Live-Daten zu laden; fällt bei Fehler auf Demo zurück
 </script>
 </body>
 </html>
