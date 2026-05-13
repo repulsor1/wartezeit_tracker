@@ -238,7 +238,7 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
     </div>
     <div class="btn-wrap">
       <button class="btn btn-danger" onclick="stopTimer()">■ Stopp – Ich bin dran!</button>
-      <button class="btn btn-ghost" onclick="cancelTimer()">Abbrechen (nicht speichern)</button>
+      <button class="btn btn-ghost" onclick="askCancel()">Abbrechen (nicht speichern)</button>
     </div>
   </div>
 
@@ -489,7 +489,19 @@ function stopTimer(){
   go('s-result');
 }
 
-function cancelTimer(){ clearInterval(timerInterval); localStorage.removeItem('wt_active'); elapsed=0; go('s-select'); }
+function askCancel(){
+  document.getElementById('modal-cancel').classList.remove('hidden');
+}
+function closeModalCancel(){
+  document.getElementById('modal-cancel').classList.add('hidden');
+}
+function confirmCancel(){
+  clearInterval(timerInterval);
+  localStorage.removeItem('wt_active');
+  elapsed=0;
+  closeModalCancel();
+  go('s-select');
+}
 
 function renderLog(){
   const w=document.getElementById('log-wrap');
