@@ -291,6 +291,18 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
   </div>
 </div>
 
+<!-- Modal: Abbrechen bestätigen -->
+<div class="modal-overlay hidden" id="modal-cancel">
+  <div class="modal-box">
+    <div class="modal-title">Messung abbrechen?</div>
+    <div class="modal-desc">Die aktuelle Messung wird nicht gespeichert.</div>
+    <div class="modal-btn-row">
+      <button class="btn btn-danger"  onclick="confirmCancel()">Ja, abbrechen</button>
+      <button class="btn btn-primary" onclick="closeModalCancel()">Weiter messen</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Löschen bestätigen -->
 <div class="modal-overlay hidden" id="modal-delete">
   <div class="modal-box">
