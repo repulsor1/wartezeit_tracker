@@ -48,6 +48,10 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
 .filter-row::-webkit-scrollbar { display:none; }
 .ftab { padding:5px 13px; border-radius:20px; font-size:13px; font-weight:500; border:0.5px solid var(--border2); background:var(--surface); color:var(--text2); cursor:pointer; white-space:nowrap; flex-shrink:0; -webkit-user-select:none; }
 .ftab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.ftab.sr-tab { background:rgba(255,183,77,0.1); border-color:rgba(255,183,77,0.3); color:#ffca80; }
+.ftab.sr-tab.active { background:#ffb74d; color:#1a1a1a; border-color:#ffb74d; }
+.ride-card.sr-card { border-color:rgba(255,183,77,0.2); background:rgba(255,183,77,0.04); }
+.sr-badge { font-size:10px; font-weight:600; background:rgba(255,183,77,0.2); color:#ffca80; padding:2px 6px; border-radius:4px; margin-top:3px; display:inline-block; }
 .rides-scroll { flex:1; overflow-y:auto; padding:0 16px 16px; -webkit-overflow-scrolling:touch; }
 .ride-card { background:var(--surface); border-radius:14px; border:0.5px solid var(--border); padding:13px 15px; display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; cursor:pointer; transition:border-color 0.15s; -webkit-user-select:none; }
 .ride-card:active { background:var(--bg3); border-color:var(--accent); }
@@ -135,6 +139,9 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
 
 /* Edit modal */
 .edit-field { margin-bottom:14px; }
+.subride-row { display:flex; gap:8px; }
+.subride-btn { flex:1; padding:9px; border-radius:12px; border:0.5px solid var(--border2); background:var(--surface); color:var(--text2); font-size:14px; font-weight:600; cursor:pointer; text-align:center; transition:all 0.15s; }
+.subride-btn.on { background:var(--accent); color:#fff; border-color:var(--accent); }
 .edit-label { font-size:11px; font-weight:600; letter-spacing:0.07em; text-transform:uppercase; color:var(--text3); margin-bottom:8px; display:block; }
 .edit-toggle-row { display:flex; gap:10px; }
 .edit-toggle { flex:1; padding:10px; border-radius:12px; border:0.5px solid var(--border2); background:var(--surface); color:var(--text2); font-size:14px; font-weight:600; cursor:pointer; text-align:center; transition:all 0.15s; }
@@ -161,11 +168,12 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
   <!-- Header -->
   <div class="header">
     <div class="header-row">
-      <div class="header-title">Wartezeit<span>Tracker v0.12</span></div>
+      <div class="header-title">Wartezeit<span>Tracker v0.14</span></div>
       <div class="live-badge off" id="live-badge"><div class="live-dot"></div><span id="live-label">Demo</span></div>
     </div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px;">
       <div class="park-chip">Phantasialand · Brühl</div>
+      <a href="https://www.wartezeiten.app/phantasialand/" target="_blank" style="font-size:10px; color:var(--text3); text-decoration:none; margin-top:4px; display:inline-block;">Live-Daten: wartezeiten.app ↗</a>
       <button class="refresh-btn" id="refresh-btn" onclick="refreshLive()" title="Wartezeiten aktualisieren">↻</button>
     </div>
   </div>
@@ -181,6 +189,7 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
       <div class="ftab" onclick="setFilter('dark',this)">Dark Ride</div>
       <div class="ftab" onclick="setFilter('wasser',this)">Wasser</div>
       <div class="ftab" onclick="setFilter('kinder',this)">Kinder</div>
+      <div class="ftab sr-tab" onclick="setFilter('sr',this)">SR</div>
     </div>
     <div class="rides-scroll" id="rides-list"></div>
   </div>
@@ -189,7 +198,7 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
   <div class="screen" id="s-confirm">
     <div class="confirm-body">
       <div class="big-name" id="c-name">–</div>
-      <div class="big-sub">Phantasialand · Brühl</div>
+      <div class="big-sub">Efteling</div>
       <div class="info-card">
         <div class="info-card-label">Angezeigte Wartezeit</div>
         <div class="wait-api-row">
@@ -326,6 +335,11 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
       </div>
     </div>
 
+    <div class="edit-field hidden" id="subride-field">
+      <span class="edit-label" id="subride-label">Bahn</span>
+      <div class="subride-row" id="subride-row"></div>
+    </div>
+
     <div class="edit-field">
       <span class="edit-label">Notiz</span>
       <textarea class="edit-note" id="edit-note" rows="2" placeholder="z.B. Reihe links, Gewitter…"></textarea>
@@ -365,58 +379,79 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
 
 <script>
 // ── Attraktionen ──
+// Attraktionen mit mehreren Bahnen
+const SUBRIDES = {
+  'Taron (Single-Rider)': ['Links', 'Rechts'],
+  'Raik (Single-Rider)':  ['Links', 'Rechts'],
+};
+
 const RIDES = [
-  {name:"Taron",                        cat:"achterbahn", wait:55},
-  {name:"F.L.Y.",                       cat:"achterbahn", wait:50},
-  {name:"Winja's Force", id:6830, cat:"achterbahn", wait:53},
-  {name:"Winja's Fear",  id:6828, cat:"achterbahn", wait:40},
-  {name:"Black Mamba",                  cat:"achterbahn", wait:34},
-  {name:"Colorado Adventure",           cat:"achterbahn", wait:35},
-  {name:"Raik",                         cat:"achterbahn", wait:36},
-  {name:"Crazy Bats",                   cat:"dark",       wait:65},
-  {name:"Maus au Chocolat",             cat:"dark",       wait:52},
-  {name:"Mystery Castle",               cat:"dark",       wait:31},
-  {name:"Das verrückte Hotel Tartüff",  cat:"dark",       wait:27},
-  {name:"Talocan",                      cat:"dark",       wait:16},
-  {name:"Wellenflug",                   cat:"dark",       wait:26},
-  {name:"Feng Ju Palace",               cat:"dark",       wait:14},
-  {name:"Geister Rikscha",              cat:"dark",       wait:5 },
-  {name:"Tikal",                        cat:"dark",       wait:17},
-  {name:"River Quest",                  cat:"wasser",     wait:30},
-  {name:"Chiapas - DIE Wasserbahn",     cat:"wasser",     wait:20},
-  {name:"Bolles Flugschule",            cat:"kinder",     wait:15},
-  {name:"Würmling Express",             cat:"kinder",     wait:15},
-  {name:"Avoras",                       cat:"kinder",     wait:10},
-  {name:"Tittle Tattle Tree",           cat:"kinder",     wait:10},
-  {name:"Bolles Riesenrad",             cat:"kinder",     wait:8 },
-  {name:"Bumper Klumpen",               cat:"kinder",     wait:8 },
-  {name:"Wupi’s Wabi Wipper",           cat:"kinder",     wait:8 },
-  {name:"Wözl’s Duck Washer",           cat:"kinder",     wait:8 },
-  {name:"Der lustige Papagei",          cat:"kinder",     wait:8 },
-  {name:"Wirtl’s Taubenturm",           cat:"kinder",     wait:8 },
-  {name:"Pferdekarussell",              cat:"kinder",     wait:8 },
-  {name:"Die fröhliche Bienchenjagd",     cat:"kinder",     wait:5 },
+  // Achterbahn
+  {name:"Taron",                       cat:"achterbahn", wait:55, uuid:"137fdf48-57b6-4d48-a30c-dbceb6f52f24"},
+  {name:"F.L.Y.",                      cat:"achterbahn", wait:50, uuid:"194a0bf0-48c4-48cf-b48d-e5633946494b"},
+  {name:"Black Mamba",                 cat:"achterbahn", wait:35, uuid:"1e6bb453-bf20-43c0-a5cf-6b451ed149f8"},
+  {name:"Colorado Adventure",          cat:"achterbahn", wait:35, uuid:"d2c90cfe-1d12-4183-a5f0-b8e12418470a"},
+  {name:"Winja's Force",               cat:"achterbahn", wait:40, uuid:"36360c9e-f8be-4feb-a45f-4a28db10e216"},
+  {name:"Winja's Fear",                cat:"achterbahn", wait:40, uuid:"b0331944-484e-4c70-b3bd-2882291f1361"},
+  {name:"Raik",                        cat:"achterbahn", wait:30, uuid:"fa77fbb2-e12b-471e-8b10-5c517727be4c"},
+  // Wasser
+  {name:"River Quest",                 cat:"wasser",     wait:30, uuid:"b9b6ef8f-abc5-4fe8-8667-9b7eccd18e36"},
+  {name:"Chiapas - DIE Wasserbahn",    cat:"wasser",     wait:20, uuid:"846c56c1-637f-4b66-bcbb-fa449ca4c9b8"},
+  // Dark Ride / Show
+  {name:"Crazy Bats",                  cat:"dark",       wait:60, uuid:"faf0f9d4-391a-471f-8936-b0e3baca9038"},
+  {name:"Maus au Chocolat",            cat:"dark",       wait:50, uuid:"b5209b03-d3af-4596-a02a-c80bea6b4477"},
+  {name:"Mystery Castle",              cat:"dark",       wait:30, uuid:"31e67bec-eaf4-472f-a929-864a2a59b22f"},
+  {name:"Das verrückte Hotel Tartüff", cat:"dark",       wait:25, uuid:"f1e642ac-b37b-4476-a43d-52f398e2d6ad"},
+  {name:"Talocan",                     cat:"dark",       wait:15, uuid:"7ac1b10f-b968-4b60-bb03-b3ec2c0f2413"},
+  {name:"Feng Ju Palace",              cat:"dark",       wait:15, uuid:"45718276-ef35-4609-8a8a-2e71417f19fb"},
+  {name:"Geister Rikscha",             cat:"dark",       wait:5,  uuid:"1b87eb53-4f26-40eb-9a6b-43f7088ec25b"},
+  {name:"Tikal",                       cat:"dark",       wait:15, uuid:"427aa516-51cd-469e-90d0-496fdb8c61d5"},
+  {name:"Wakobato",                    cat:"dark",       wait:15, uuid:"6fbc8f40-4aa6-44f2-8fec-b15998f15c47"},
+  {name:"Deep in Africa – Adventure Trail", cat:"dark", wait:10, uuid:"9da92039-2c7f-4ef9-b4bd-d2c54a3c5109"},
+  // Kinder
+  {name:"Wellenflug",                  cat:"kinder",     wait:20, uuid:"41c344fd-68fe-4d85-b653-5e1fe0a98df9"},
+  {name:"Tittle Tattle Tree",          cat:"kinder",     wait:15, uuid:"4d1faee7-0d1f-44b6-b196-a14f99c21510"},
+  {name:"Würmling Express",            cat:"kinder",     wait:15, uuid:"565aa31c-b75e-4a06-9e1d-a2007cf6aad1"},
+  {name:"Wolke's Luftpost",            cat:"kinder",     wait:10, uuid:"d2a7dc86-9a46-49a4-9ea3-f54faeb7f681"},
+  {name:"Die 3 Mausketiere",           cat:"kinder",     wait:10, uuid:"bc8ab579-da51-4328-b037-6c91e9d11d12"},
+  {name:"Bolles Flugschule",           cat:"kinder",     wait:10, uuid:"b178dd2e-6dae-43d2-b087-f6785a60507e"},
+  {name:"Bolles Riesenrad",            cat:"kinder",     wait:8,  uuid:"47651223-0ab6-44b0-871e-61b65bd89144"},
+  {name:"Bumper Klumpen",              cat:"kinder",     wait:8,  uuid:"b2c96cdc-50be-42bb-a7ff-e481494e4fe1"},
+  {name:"Der lustige Papagei",         cat:"kinder",     wait:8,  uuid:"44be9d39-6559-41e2-8bb8-32891b02afee"},
+  {name:"Die fröhliche Bienchenjagd", cat:"kinder",     wait:5,  uuid:"658726a6-f4b3-47b1-9b75-472f4bc73430"},
+  {name:"Pferdekarussell",             cat:"kinder",     wait:5,  uuid:"e9c40a41-1753-442b-9906-52f0b0881132"},
+  {name:"Wirtl's Taubenturm",         cat:"kinder",     wait:5,  uuid:"234c35b0-5dac-48b1-aab8-214d4474cbdd"},
+  {name:"Wözl's Duck Washer",         cat:"kinder",     wait:5,  uuid:"220e88fe-3a13-4c96-b651-c3860a7353f2"},
+  {name:"Wözl's Wassertreter",        cat:"kinder",     wait:5,  uuid:"351d4075-5915-4d97-8393-cd9c5d97184e"},
+  {name:"Wupi's Wabi Wipper",         cat:"kinder",     wait:5,  uuid:"4bf4fa1d-c245-4bf6-b181-c6b78f04142d"},
+  // Single Rider
+  {name:"Taron (Single-Rider)",        cat:"sr", cat2:"achterbahn", wait:15},
+  {name:"Raik (Single-Rider)",         cat:"sr", cat2:"achterbahn", wait:10},
 ];
 
-const CATS = {achterbahn:"Achterbahn", dark:"Dark Ride / Show", wasser:"Wasserfahrt", kinder:"Kinderfahrt"};
+const CATS = {achterbahn:"Achterbahn", dark:"Dark Ride / Show", wasser:"Wasserfahrt", kinder:"Kinder", sr:"Single Rider"};
 
-// Live-Wartezeiten per CORS-Proxy von queue-times.com (Park-ID 56 = Phantasialand)
-let liveWaits = {};   // name → Minuten
-let liveWaitsById = {}; // id → Minuten
+// Live-Wartezeiten per CORS-Proxy von wartezeiten.app (Phantasialand)
+let liveWaits = {};       // name → Minuten
+let liveWaitsByUuid = {}; // uuid → Minuten
 let liveLoaded = false;
 
 async function fetchLive() {
   const badge = document.getElementById('live-badge');
   const label = document.getElementById('live-label');
   try {
-    const proxy = 'https://repulsor1--9cda87723c8c11f19a5c42b51c65c3df.web.val.run';
-    const res = await fetch(proxy, {signal: AbortSignal.timeout(8000)});
+    const proxy = 'https://repulsor1--a237e1ec74bd11f1a7e11607ee4eb77e.web.val.run';
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(proxy, {signal: controller.signal});
+    clearTimeout(timeout);
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    const rides = data.lands ? data.lands.flatMap(l => l.rides || []) : (data.rides || []);
+    const rides = await res.json();
+    // wartezeiten.app returns a flat array
     rides.forEach(r => {
-      if (r.name && r.wait_time != null) liveWaits[r.name] = r.wait_time;
-      if (r.id  && r.wait_time != null) liveWaitsById[r.id] = r.wait_time;
+      const val = r.status === 'opened' ? r.waitingtime : -1;
+      if (r.name) liveWaits[r.name] = val;
+      if (r.uuid) liveWaitsByUuid[r.uuid] = val;
     });
     liveLoaded = Object.keys(liveWaits).length > 0;
     if (liveLoaded) {
@@ -435,14 +470,12 @@ async function fetchLive() {
 }
 
 function getWait(name) {
-  if (liveLoaded) {
-    // try by name first, then by id for rides with special characters
-    if (liveWaits[name] != null) return {val: liveWaits[name], live: true};
-    const rideEntry = RIDES.find(x => x.name === name);
-    if (rideEntry && rideEntry.id && liveWaitsById[rideEntry.id] != null)
-      return {val: liveWaitsById[rideEntry.id], live: true};
+  if (liveLoaded && liveWaits[name] != null) {
+    const v = liveWaits[name];
+    return {val: v < 0 ? 0 : v, live: v >= 0, closed: v < 0};
   }
-  return {val: 0, live: false};
+  const r = RIDES.find(x => x.name === name);
+  return {val: r ? r.wait : 0, live: false, closed: false};
 }
 
 // ── State ──
@@ -455,18 +488,19 @@ function pad(n){ return String(n).padStart(2,'0'); }
 
 function render(){
   const q = document.getElementById('search').value.toLowerCase();
-  const list = RIDES.filter(r=>(filter==='alle'||r.cat===filter)&&r.name.toLowerCase().includes(q));
+  const list = RIDES.filter(r=>(filter==='alle'||r.cat===filter||r.cat2===filter)&&r.name.toLowerCase().includes(q));
   const el = document.getElementById('rides-list');
   if(!list.length){ el.innerHTML='<div class="empty">Keine Attraktionen gefunden</div>'; return; }
   el.innerHTML = list.map(r=>{
     const w = getWait(r.name);
-    const cls = w.live ? 'wlive' : 'wna';
-    const label = w.live && w.val ? w.val+' min' : '–';
+    const cls = w.closed ? 'wna' : w.live ? 'wlive' : 'wna';
+    const label = w.closed ? 'Geschl.' : (w.live && w.val ? w.val+' min' : '–');
     const safeName = r.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return `<div class="ride-card" onclick="pick('${safeName}',${w.val},${w.live})">
+    const isSR = r.cat === 'sr';
+    return `<div class="ride-card${isSR?' sr-card':''}" onclick="pick('${safeName}',${w.val},${w.live})">
       <div class="ride-info">
         <div class="ride-name">${r.name}</div>
-        <div class="ride-cat">${CATS[r.cat]}</div>
+        ${isSR ? '<span class="sr-badge">Single Rider</span>' : `<div class="ride-cat">${CATS[r.cat]}</div>`}
       </div>
       <div class="wait-pill ${cls}">${label}</div>
     </div>`;
@@ -488,7 +522,7 @@ function pick(name, wait, live){
   const b=document.getElementById('c-badge');
   b.className='wait-pill '+(live&&wait?'wlive':'wna');
   b.textContent=live&&wait?wait+' min':'–';
-  document.getElementById('c-src').textContent=live?'Quelle: queue-times.com (Live ●)':'Keine Live-Daten – bitte manuell eingeben';
+  document.getElementById('c-src').textContent=live?'Quelle: wartezeiten.app (Live ●)':'Keine Live-Daten – bitte manuell eingeben';
   go('s-confirm');
 }
 
@@ -569,6 +603,7 @@ function renderLog(){
     const m=Math.floor(e.measuredS/60), s=e.measuredS%60;
     const d=e.diff===0?'±0':e.diff>0?'+'+e.diff+'min':e.diff+'min';
     const extras=[];
+    if(e.subride) extras.push(e.subride);
     if(e.sr) extras.push('SR');
     if(e.vq) extras.push('VQ');
     if(e.row) extras.push('R'+e.row);
@@ -588,6 +623,7 @@ function buildText(){
     const endH = e.endTime ? e.endTime.replace(':','').replace(' Uhr','') : '–';
     const measMin = Math.floor(e.measuredS/60);
     const extras=[];
+    if(e.subride) extras.push(e.subride);
     if(e.sr) extras.push('SR');
     if(e.vq) extras.push('VQ');
     if(e.row) extras.push('R'+e.row);
@@ -639,7 +675,7 @@ function confirmDelete(){
 
 // ── Eintrag bearbeiten ──
 let editIndex = -1;
-let editSr = false, editVq = false, editRow = 0;
+let editSr = false, editVq = false, editRow = 0, editSubride = null;
 
 function openEdit(i) {
   editIndex = i;
@@ -647,12 +683,35 @@ function openEdit(i) {
   editSr = e.sr || false;
   editVq = e.vq || false;
   editRow = e.row || 0;
+  editSubride = e.subride || null;
   document.getElementById('edit-title').textContent = e.ride;
   document.getElementById('tog-sr').className = 'edit-toggle' + (editSr ? ' on' : '');
   document.getElementById('tog-vq').className = 'edit-toggle' + (editVq ? ' on' : '');
   document.getElementById('edit-row-val').textContent = editRow || '–';
   document.getElementById('edit-note').value = e.note || '';
+
+  // Subride field
+  const subrideField = document.getElementById('subride-field');
+  const subrideRow   = document.getElementById('subride-row');
+  const options = SUBRIDES[e.ride];
+  if (options) {
+    subrideField.classList.remove('hidden');
+    subrideRow.innerHTML = options.map(o =>
+      `<div class="subride-btn${editSubride===o?' on':''}" onclick="selectSubride('${o}')">${o}</div>`
+    ).join('');
+  } else {
+    subrideField.classList.add('hidden');
+    subrideRow.innerHTML = '';
+  }
+
   document.getElementById('modal-edit').classList.remove('hidden');
+}
+
+function selectSubride(val) {
+  editSubride = editSubride === val ? null : val;
+  document.querySelectorAll('.subride-btn').forEach(b => {
+    b.className = 'subride-btn' + (b.textContent === val && editSubride ? ' on' : '');
+  });
 }
 
 function toggleEdit(field) {
@@ -667,10 +726,11 @@ function changeRow(d) {
 
 function saveEdit() {
   if(editIndex < 0) return;
-  log[editIndex].sr   = editSr;
-  log[editIndex].vq   = editVq;
-  log[editIndex].row  = editRow || null;
-  log[editIndex].note = document.getElementById('edit-note').value.trim() || null;
+  log[editIndex].sr      = editSr;
+  log[editIndex].vq      = editVq;
+  log[editIndex].row     = editRow || null;
+  log[editIndex].subride = editSubride || null;
+  log[editIndex].note    = document.getElementById('edit-note').value.trim() || null;
   localStorage.setItem('wt_log', JSON.stringify(log));
   renderLog();
   closeModalEdit();
