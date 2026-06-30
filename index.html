@@ -189,7 +189,6 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
       <div class="ftab" onclick="setFilter('dark',this)">Dark Ride</div>
       <div class="ftab" onclick="setFilter('wasser',this)">Wasser</div>
       <div class="ftab" onclick="setFilter('kinder',this)">Kinder</div>
-      <div class="ftab sr-tab" onclick="setFilter('sr',this)">SR</div>
     </div>
     <div class="rides-scroll" id="rides-list"></div>
   </div>
@@ -318,26 +317,16 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
   <div class="modal-box">
     <div class="modal-title" id="edit-title">Eintrag bearbeiten</div>
 
-    <div class="edit-field">
-      <span class="edit-label">Extras</span>
-      <div class="edit-toggle-row">
-        <div class="edit-toggle" id="tog-sr" onclick="toggleEdit('sr')">Single Rider</div>
-        <div class="edit-toggle" id="tog-vq" onclick="toggleEdit('vq')">Virtual Queue</div>
-      </div>
-    </div>
-
-    <div class="edit-field">
-      <span class="edit-label">Reihe</span>
-      <div class="edit-number-row">
-        <button class="edit-num-btn" onclick="changeRow(-1)">−</button>
-        <div class="edit-num-val" id="edit-row-val">–</div>
-        <button class="edit-num-btn" onclick="changeRow(1)">+</button>
-      </div>
-    </div>
-
     <div class="edit-field hidden" id="subride-field">
       <span class="edit-label" id="subride-label">Bahn</span>
       <div class="subride-row" id="subride-row"></div>
+    </div>
+
+    <div class="edit-field hidden" id="sr-field">
+      <span class="edit-label">Single Rider</span>
+      <div class="edit-toggle-row">
+        <div class="edit-toggle" id="tog-sr" onclick="toggleSR()">Single Rider genutzt</div>
+      </div>
     </div>
 
     <div class="edit-field">
@@ -380,10 +369,10 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
 <script>
 // ── Attraktionen ──
 // Attraktionen mit mehreren Bahnen
-const SUBRIDES = {
-  'Taron (Single-Rider)': ['Links', 'Rechts'],
-  'Raik (Single-Rider)':  ['Links', 'Rechts'],
-};
+// Attraktionen mit Single-Rider-Option
+const SR_RIDES = ['Taron', 'Raik'];
+
+const SUBRIDES = {};
 
 const RIDES = [
   // Achterbahn
@@ -424,9 +413,6 @@ const RIDES = [
   {name:"Wözl's Duck Washer",         cat:"kinder",     wait:5,  uuid:"220e88fe-3a13-4c96-b651-c3860a7353f2"},
   {name:"Wözl's Wassertreter",        cat:"kinder",     wait:5,  uuid:"351d4075-5915-4d97-8393-cd9c5d97184e"},
   {name:"Wupi's Wabi Wipper",         cat:"kinder",     wait:5,  uuid:"4bf4fa1d-c245-4bf6-b181-c6b78f04142d"},
-  // Single Rider
-  {name:"Taron (Single-Rider)",        cat:"sr", cat2:"achterbahn", wait:15},
-  {name:"Raik (Single-Rider)",         cat:"sr", cat2:"achterbahn", wait:10},
 ];
 
 const CATS = {achterbahn:"Achterbahn", dark:"Dark Ride / Show", wasser:"Wasserfahrt", kinder:"Kinder", sr:"Single Rider"};
@@ -603,9 +589,8 @@ function renderLog(){
     const m=Math.floor(e.measuredS/60), s=e.measuredS%60;
     const d=e.diff===0?'±0':e.diff>0?'+'+e.diff+'min':e.diff+'min';
     const extras=[];
-    if(e.subride) extras.push(e.subride);
     if(e.sr) extras.push('SR');
-    if(e.vq) extras.push('VQ');
+    if(e.subride) extras.push(e.subride);
     if(e.row) extras.push('R'+e.row);
     if(e.note) extras.push('"'+e.note+'"');
     const extStr=extras.length?'<div class="log-row-edit">'+extras.join(' ')+'</div>':'<div class="log-row-edit" style="color:var(--text3)">✏️ tippen zum Bearbeiten</div>';
@@ -623,9 +608,8 @@ function buildText(){
     const endH = e.endTime ? e.endTime.replace(':','').replace(' Uhr','') : '–';
     const measMin = Math.floor(e.measuredS/60);
     const extras=[];
-    if(e.subride) extras.push(e.subride);
     if(e.sr) extras.push('SR');
-    if(e.vq) extras.push('VQ');
+    if(e.subride) extras.push(e.subride);
     if(e.row) extras.push('R'+e.row);
     if(e.note) extras.push('"'+e.note+'"');
     return e.ride+' '+endH+' '+measMin+'/'+e.statedMin+(extras.length?' '+extras.join(' '):'');
@@ -675,19 +659,26 @@ function confirmDelete(){
 
 // ── Eintrag bearbeiten ──
 let editIndex = -1;
-let editSr = false, editVq = false, editRow = 0, editSubride = null;
+let editSr = false, editRow = 0, editSubride = null;
 
 function openEdit(i) {
   editIndex = i;
   const e = log[i];
   editSr = e.sr || false;
-  editVq = e.vq || false;
   editRow = e.row || 0;
   editSubride = e.subride || null;
   document.getElementById('edit-title').textContent = e.ride;
-  document.getElementById('tog-sr').className = 'edit-toggle' + (editSr ? ' on' : '');
-  document.getElementById('tog-vq').className = 'edit-toggle' + (editVq ? ' on' : '');
   document.getElementById('edit-row-val').textContent = editRow || '–';
+
+  // SR-Button nur bei Taron und Raik
+  const srField = document.getElementById('sr-field');
+  const togSr   = document.getElementById('tog-sr');
+  if (SR_RIDES.includes(e.ride)) {
+    srField.classList.remove('hidden');
+    togSr.className = 'edit-toggle' + (editSr ? ' on' : '');
+  } else {
+    srField.classList.add('hidden');
+  }
   document.getElementById('edit-note').value = e.note || '';
 
   // Subride field
@@ -707,16 +698,16 @@ function openEdit(i) {
   document.getElementById('modal-edit').classList.remove('hidden');
 }
 
+function toggleSR() {
+  editSr = !editSr;
+  document.getElementById('tog-sr').className = 'edit-toggle' + (editSr ? ' on' : '');
+}
+
 function selectSubride(val) {
   editSubride = editSubride === val ? null : val;
   document.querySelectorAll('.subride-btn').forEach(b => {
     b.className = 'subride-btn' + (b.textContent === val && editSubride ? ' on' : '');
   });
-}
-
-function toggleEdit(field) {
-  if(field==='sr'){ editSr=!editSr; document.getElementById('tog-sr').className='edit-toggle'+(editSr?' on':''); }
-  if(field==='vq'){ editVq=!editVq; document.getElementById('tog-vq').className='edit-toggle'+(editVq?' on':''); }
 }
 
 function changeRow(d) {
@@ -726,8 +717,7 @@ function changeRow(d) {
 
 function saveEdit() {
   if(editIndex < 0) return;
-  log[editIndex].sr      = editSr;
-  log[editIndex].vq      = editVq;
+  log[editIndex].sr      = editSr || false;
   log[editIndex].row     = editRow || null;
   log[editIndex].subride = editSubride || null;
   log[editIndex].note    = document.getElementById('edit-note').value.trim() || null;
