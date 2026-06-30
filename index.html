@@ -331,6 +331,15 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
     </div>
 
     <div class="edit-field">
+      <span class="edit-label">Reihe</span>
+      <div class="edit-number-row">
+        <button class="edit-num-btn" onclick="changeRow(-1)">−</button>
+        <div class="edit-num-val" id="edit-row-val">–</div>
+        <button class="edit-num-btn" onclick="changeRow(1)">+</button>
+      </div>
+    </div>
+
+    <div class="edit-field">
       <span class="edit-label">Notiz</span>
       <textarea class="edit-note" id="edit-note" rows="2" placeholder="z.B. Reihe links, Gewitter…"></textarea>
     </div>
