@@ -156,6 +156,7 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
 /* Modal */
 .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); display:flex; align-items:flex-end; justify-content:center; z-index:100; padding:0 0 max(env(safe-area-inset-bottom,0px),16px); }
 .modal-overlay.hidden { display:none; }
+.hidden { display:none !important; }
 .modal-box { background:var(--bg2); border-radius:20px 20px 0 0; border:0.5px solid var(--border2); padding:24px 20px 8px; width:100%; max-width:430px; }
 .modal-title { font-size:17px; font-weight:700; margin-bottom:8px; }
 .modal-desc  { font-size:14px; color:var(--text2); margin-bottom:20px; line-height:1.5; }
@@ -672,10 +673,10 @@ function openEdit(i) {
 
   // SR-Button nur bei Taron und Raik
   const srField = document.getElementById('sr-field');
-  const togSr   = document.getElementById('tog-sr');
   if (SR_RIDES.includes(e.ride)) {
     srField.classList.remove('hidden');
-    togSr.className = 'edit-toggle' + (editSr ? ' on' : '');
+    const togSr = document.getElementById('tog-sr');
+    if (togSr) togSr.className = 'edit-toggle' + (editSr ? ' on' : '');
   } else {
     srField.classList.add('hidden');
   }
@@ -700,7 +701,8 @@ function openEdit(i) {
 
 function toggleSR() {
   editSr = !editSr;
-  document.getElementById('tog-sr').className = 'edit-toggle' + (editSr ? ' on' : '');
+  const togSr = document.getElementById('tog-sr');
+  if (togSr) togSr.className = 'edit-toggle' + (editSr ? ' on' : '');
 }
 
 function selectSubride(val) {
