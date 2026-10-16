@@ -169,7 +169,7 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
   <!-- Header -->
   <div class="header">
     <div class="header-row">
-      <div class="header-title">Wartezeit<span>Tracker v0.14</span></div>
+      <div class="header-title">Wartezeit<span>Tracker v0.15</span></div>
       <div class="live-badge off" id="live-badge"><div class="live-dot"></div><span id="live-label">Demo</span></div>
     </div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px;">
@@ -466,9 +466,17 @@ async function fetchLive() {
 }
 
 function getWait(name) {
-  if (liveLoaded && liveWaits[name] != null) {
-    const v = liveWaits[name];
-    return {val: v < 0 ? 0 : v, live: v >= 0, closed: v < 0};
+  if (liveLoaded) {
+    if (liveWaits[name] != null) {
+      const v = liveWaits[name];
+      return {val: v < 0 ? 0 : v, live: v >= 0, closed: v < 0};
+    }
+    // Fallback: UUID-Lookup (z.B. wenn API typografische Apostrophe liefert)
+    const r = RIDES.find(x => x.name === name);
+    if (r && r.uuid && liveWaitsByUuid[r.uuid] != null) {
+      const v = liveWaitsByUuid[r.uuid];
+      return {val: v < 0 ? 0 : v, live: v >= 0, closed: v < 0};
+    }
   }
   const r = RIDES.find(x => x.name === name);
   return {val: r ? r.wait : 0, live: false, closed: false};
